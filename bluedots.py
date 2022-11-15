@@ -24,13 +24,16 @@ def find_points(image: np.array) -> List[Tuple[int]]:
     hsv1 = cv2.cvtColor(a, cv2.COLOR_BGR2HSV)
     hsv2 = cv2.cvtColor(b, cv2.COLOR_BGR2HSV)
 
-    print(hsv1, hsv2)
-
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
+    coord = cv2.findNonZero(mask)
+
     res = cv2.bitwise_not(image, image, mask=mask)
+
+    
+    coord = np.array(coord)
 
     cv2.imshow('mask', res)
     cv2.waitKey(0)
@@ -66,9 +69,8 @@ def main() -> None:
         #     blur_point(numpy_pic, p)
     
         numpy_pic_array.append(numpy_pic)
-    
-    print(numpy_pic_array[0])
-    find_points(numpy_pic_array[0])
+
+    find_points(numpy_pic_array[14])
     # for index, modified_img in enumerate(numpy_pic_array):
     #     save_img = Image.fromarray(modified_img)
     #     save_img.save(f'./ModifiedChickenData/{index}.png')
