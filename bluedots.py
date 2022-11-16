@@ -11,46 +11,45 @@ WHITE = [255, 255, 255]
 NO_OF_COLORS = 20
 COLORS = {}
 
-#read the csv file for the points. Return as (x,y) 
-def find_points(image: np.array) -> List[Tuple[int]]:
-    image_copy = copy.deepcopy(image)
-    lower_blue = np.array([78,48,53])
+#Function find_points:
+#Gather all the blue points from the image and return its [x,y] coordinates
+#param: image -> BGR matrix representing the image.
+#output: List of [x,y] where x represents the column and y represents the row.
+def find_points(image: np.array) -> List[List[int]]:
+    new_lower = np.uint8([[[38, 40, 36]]])
+
+    hsv1 = cv2.cvtColor(new_lower, cv2.COLOR_BGR2HSV)
+
+    print(hsv1)
+
+    image_cpy = copy.deepcopy(image)
+    lower_blue = np.array([75,26,40])   
     upper_blue = np.array([145,255,255])
 
-    a = np.uint8([[[49, 53, 43]]])
-    b = np.uint8([[[255, 0, 213]]])
+    # lower_blue = np.array([95, 27, 217])
+    # upper_blue = np.array([69, 85, 81])
 
-    hsv1 = cv2.cvtColor(a, cv2.COLOR_BGR2HSV)
-    hsv2 = cv2.cvtColor(b, cv2.COLOR_BGR2HSV)
-
-    hsv = cv2.cvtColor(image_copy, cv2.COLOR_BGR2HSV)
-
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
+    res = cv2.bitwise_not(image_cpy, image_cpy, mask=mask)
 
-    coord = cv2.findNonZero(mask)
+    # cv2.imshow("testing", res)
+    # cv2.waitKey(0)
 
-    res = cv2.bitwise_not(image_copy, image_copy, mask=mask)
-
-
-    
-    coord = np.array(coord)
-    coords = coord.squeeze(1)
+    coords = cv2.findNonZero(mask)  
+    coords = np.array(coords)
+    coords = coords.squeeze(1)
     
     return coords
 
-
-def blur_point(image: np.array, point: Tuple[int]) -> np.array:
-    # image[point[1]][point[0]] = WHITE
-    blurred_image = cv2.GaussianBlur(image, (101,101), 1)
+#Function blur_points:
+#Blurs the point passed in on the image provided.
+#Params: image: BGR matrix representation of image, List of two elements x,y 
+#        which are the coordinates on the image to be blurred.
+#Output: None, does it inplace on the image provided. 
+def blur_point(image: np.array, blurred_image, point: List[int]) -> None:
     cv2.imwrite('test.png', blurred_image)
     image[point[1]][point[0]] = blurred_image[point[1]][point[0]]
-
-    
-
-#if needed find average using a window around the point, then get average
-#color of the window to blur the chicken point.
-def find_average(image: np.array, point: Tuple[int]) -> np.array:
-    pass
 
 
 def main() -> None:
@@ -68,18 +67,15 @@ def main() -> None:
     for img in images[:1]:
         pic = cv2.imread(directory+img, cv2.IMREAD_COLOR)
         numpy_pic: np.array = np.asarray(pic)
-        
+        blurred_image = cv2.blur(numpy_pic, (101,101), 1)
         for p in find_points(numpy_pic):
-            blur_point(numpy_pic, p)
+            blur_point(numpy_pic, blurred_image, p)
     
         numpy_pic_array.append(numpy_pic)
 
-    f = find_points(numpy_pic_array[-1])
-
-
-    # for index, modified_img in enumerate(numpy_pic_array):
-    #     save_img = Image.fromarray(modified_img)
-    #     save_img.save(f'./ModifiedChickenData/{index}.png')
+    for index, modified_img in enumerate(numpy_pic_array):
+        print(f'writing: {index}.png')
+        cv2.imwrite(f'./ModifiedChickenData/{index}.png', modified_img)
 
     
  
