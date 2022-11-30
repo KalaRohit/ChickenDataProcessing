@@ -4,12 +4,37 @@ import sys
 import numpy as np
 import cv2
 import copy
+import torch
 from lama_cleaner.model.lama import LaMa
+from urllib.parse import urlparse
+from torch.hub import download_url_to_file, get_dir
 from typing import List, Tuple
 
 WHITE = [255, 255, 255]
 NO_OF_COLORS = 20
 COLORS = {}
+LAMA_MODEL_URL = os.environ.get(
+    "LAMA_MODEL_URL",
+    "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt",
+)
+
+def get_cache_path_by_url(url):
+    parts = urlparse(url)
+    hub_dir = get_dir()
+    model_dir = os.path.join(hub_dir, "checkpoints")
+    if not os.path.isdir(model_dir):
+        os.makedirs(os.path.join(model_dir, "hub", "checkpoints"))
+    filename = os.path.basename(parts.path)
+    cached_file = os.path.join(model_dir, filename)
+    return cached_file
+
+def download_model(url):
+    cached_file = get_cache_path_by_url(url)
+    if not os.path.exists(cached_file):
+        sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
+        hash_prefix = None
+        download_url_to_file(url, cached_file, hash_prefix, progress=True)
+    return cached_file
 
 #Function find_points:
 #Gather all the blue points from the image and return its [x,y] coordinates
@@ -40,16 +65,18 @@ def find_points(image: np.array) -> List[List[int]]:
     coords = np.array(coords)
     coords = coords.squeeze(1)
     
-    return coords
+    return mask
 
 #Function blur_points:
 #Blurs the point passed in on the image provided.
 #Params: image: BGR matrix representation of image, List of two elements x,y 
 #        which are the coordinates on the image to be blurred.
 #Output: None, does it inplace on the image provided. 
-def blur_point(image: np.array, blurred_image, point: List[int]) -> None:
-    cv2.imwrite('test.png', blurred_image)
-    image[point[1]][point[0]] = blurred_image[point[1]][point[0]]
+def blur_point(image: np.array, mask) -> None:
+    download_model(LAMA_MODEL_URL)
+    model = LaMa(torch.device)
+
+    return model(image, mask)
 
 
 def main() -> None:
@@ -67,9 +94,9 @@ def main() -> None:
     for img in images[:1]:
         pic = cv2.imread(directory+img, cv2.IMREAD_COLOR)
         numpy_pic: np.array = np.asarray(pic)
-        blurred_image = cv2.blur(numpy_pic, (101,101), 1)
-        for p in find_points(numpy_pic):
-            blur_point(numpy_pic, blurred_image, p)
+        
+        for mask in find_points(numpy_pic):
+            blur_point(numpy_pic, mask)
     
         numpy_pic_array.append(numpy_pic)
 
