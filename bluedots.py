@@ -9,6 +9,7 @@ from lama_cleaner.model.lama import LaMa
 from urllib.parse import urlparse
 from torch.hub import download_url_to_file, get_dir
 from typing import List, Tuple
+from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 
 WHITE = [255, 255, 255]
 NO_OF_COLORS = 20
@@ -17,6 +18,23 @@ LAMA_MODEL_URL = os.environ.get(
     "LAMA_MODEL_URL",
     "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt",
 )
+
+
+def get_config(strategy):
+    data = dict(
+        ldm_steps=1,
+        ldm_sampler=LDMSampler.plms,
+        hd_strategy=strategy,
+        hd_strategy_crop_margin=32,
+        hd_strategy_crop_trigger_size=200,
+        hd_strategy_resize_limit=200,
+    )
+    return Config(ldm_steps=1,
+        ldm_sampler=LDMSampler.plms,
+        hd_strategy='HDStrategy',
+        hd_strategy_crop_margin=32,
+        hd_strategy_crop_trigger_size=200,
+        hd_strategy_resize_limit=200)
 
 def get_cache_path_by_url(url):
     parts = urlparse(url)
@@ -56,16 +74,17 @@ def find_points(image: np.array) -> List[List[int]]:
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
-    res = cv2.bitwise_not(image_cpy, image_cpy, mask=mask)
+    print('t1', mask.shape)
+    # res = cv2.bitwise_not(image_cpy, image_cpy, mask=mask)
 
     # cv2.imshow("testing", res)
     # cv2.waitKey(0)
 
-    coords = cv2.findNonZero(mask)  
-    coords = np.array(coords)
-    coords = coords.squeeze(1)
+    # coords = cv2.findNonZero(mask)  
+    # coords = np.array(coords)
+    # coords = coords.squeeze(1)
     
-    return mask
+    return cv2.inRange(hsv, lower_blue, upper_blue)
 
 #Function blur_points:
 #Blurs the point passed in on the image provided.
@@ -74,9 +93,11 @@ def find_points(image: np.array) -> List[List[int]]:
 #Output: None, does it inplace on the image provided. 
 def blur_point(image: np.array, mask) -> None:
     download_model(LAMA_MODEL_URL)
-    model = LaMa(torch.device)
-
-    return model(image, mask)
+    print(mask.shape)
+    device = torch.device(device = 'cuda' if torch.cuda.is_available() else 'cpu')
+    model = LaMa(device)
+    config = get_config(HDStrategy)
+    return model(image, mask, config)
 
 
 def main() -> None:
@@ -94,9 +115,9 @@ def main() -> None:
     for img in images[:1]:
         pic = cv2.imread(directory+img, cv2.IMREAD_COLOR)
         numpy_pic: np.array = np.asarray(pic)
-        
-        for mask in find_points(numpy_pic):
-            blur_point(numpy_pic, mask)
+        mask = find_points(numpy_pic)
+        blur_point(numpy_pic, mask)
+            
     
         numpy_pic_array.append(numpy_pic)
 
