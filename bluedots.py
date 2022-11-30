@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import cv2
 import copy
-
+from lama_cleaner.model.lama import LaMa
 from typing import List, Tuple
 
 WHITE = [255, 255, 255]
